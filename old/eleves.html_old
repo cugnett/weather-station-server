@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Météo</title>
+</head>
+<body>
+    <p>Les eleves</p>
+    {% if eleves|length == 0 %}
+        <p>Aucun eleve ne correspond à la requête</p>
+    {% else %}
+        <ul>
+            {% for eleve in eleves: %}
+                <li>{{ eleve['nom'] }} {{ eleve['prenom']}}, classe {{ eleve['classe']}}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</body>
+</html>
