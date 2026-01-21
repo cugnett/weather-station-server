@@ -1,11 +1,11 @@
 import csv
-from pathlib import Path
+from datetime import datetime
 
 CSV_BASE_FILENAME = 'weather_data_'
 
-FIELDNAMES = ["TEMPERATURE_INTERNAL", "TEMPERATURE", "PRESSURE", "WIND_SPEED", "HUMIDITY"]
+FIELDNAMES = ["TIMESTAMP", "TEMPERATURE_INTERNAL", "TEMPERATURE", "PRESSURE", "WIND_SPEED", "HUMIDITY"]
 ## TO DO LATER => make a better way to manage fieldnames
-
+## TO DO LATER => give the timestamp responsability to the weather station by setting up a Real Time Clock
 """
 Write data in CSV file
 :param csvfilepath: (Path object) csv file path
@@ -23,8 +23,10 @@ def csv_write_database(csvfilepath, data):
     for dict in data: #data is a list of dict
         for key, value in dict.items():
             structured_data[i][key] = value
-            # if I completed a  line jump to the next one
-            if len(structured_data[i]) == len(FIELDNAMES):
+            # if I completed a line add a timestamp and jump to the next one
+            if len(structured_data[i]) == len(FIELDNAMES)-1:
+                timestamp = str(datetime.now())
+                structured_data[i]["TIMESTAMP"] = timestamp
                 structured_data.append({})
                 i += 1
     #remove last line if incomplete and compute numbers of values to write in db
@@ -47,30 +49,3 @@ def csv_create(csvfilepath):
     with open(csvfilepath, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=FIELDNAMES,  delimiter=',')
         writer.writeheader()
-
-"""
-Save specified data  in file in parameter
-data shall be in format :
-{ 'field': data }
-"""                   
-def csv_write_single_data(csvfilepath, data):
-
-    with open(csvfilepath, 'r', newline='') as csvfile:
-        # Get existing csv columns (fields)
-        reader = csv.DictReader(csvfile, delimiter=',')
-        fieldnames = reader.fieldnames
-
-        # If the CSV file is empty, there is no fieldnames so fieldnames is None. However we need it to be an array to append new fields
-        if fieldnames == None:
-            fieldnames = []
-        # extend with new fields if needed
-        for key in data.keys():
-            if not key in fieldnames:
-                fieldnames.append(key)
-        print(fieldnames)
-
-        # add data to csv file
-    with open(csvfilepath, 'a', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,  delimiter=',')
-        writer.writeheader()
-        writer.writerow(data)
