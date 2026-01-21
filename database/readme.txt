@@ -1,0 +1,1 @@
+This folder stores received weather station data as CSV file
