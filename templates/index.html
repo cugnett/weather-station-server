@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+    <script type="text/javascript" src="{{ url_for('static', filename = 'js/app.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/clock.js') }}"></script>
     <p>Bienvenue sur l'outil <b>Météo</b></p>
     <span id="clock"></span>
     <p>Localisation: <b>Pélussin</b></p>

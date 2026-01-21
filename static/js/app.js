@@ -8,7 +8,7 @@ $(document).ready(function () {
   const myChartTemperature = new Chart(ctxTemperature, {
     type: "line",
     data: {
-      datasets: [{ label: "Temperature",  }],
+      datasets: [{ label: "Temperature (°C)",  }],
     },
     options: {
       borderWidth: 3,
@@ -19,7 +19,7 @@ $(document).ready(function () {
   const myChartPressure = new Chart(ctxPressure, {
     type: "line",
     data: {
-      datasets: [{ label: "Pressure",  }],
+      datasets: [{ label: "Pressure (Pa)",  }],
     },
     options: {
       borderWidth: 3,
@@ -30,7 +30,7 @@ $(document).ready(function () {
   const myChartHumidity = new Chart(ctxHumidity, {
     type: "line",
     data: {
-      datasets: [{ label: "Humidity",  }],
+      datasets: [{ label: "Humidity (%)",  }],
     },
     options: {
       borderWidth: 3,
@@ -41,7 +41,7 @@ $(document).ready(function () {
   const myChartWindSpeed = new Chart(ctxWindSpeed, {
     type: "line",
     data: {
-      datasets: [{ label: "Wind Speed",  }],
+      datasets: [{ label: "Wind Speed (km/h)",  }],
     },
     options: {
       borderWidth: 3,
@@ -52,7 +52,7 @@ $(document).ready(function () {
   const myChartInternalTemperature = new Chart(ctxInternalTemperature, {
     type: "line",
     data: {
-      datasets: [{ label: "Internal Temperature",  }],
+      datasets: [{ label: "Internal Temperature (°C)",  }],
     },
     options: {
       borderWidth: 3,

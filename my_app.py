@@ -7,6 +7,7 @@ from copy import deepcopy
 from csv_database import csv_write_database, CSV_BASE_FILENAME
 from pathlib import Path
 from time import sleep
+from weather_data import get_weather_data
 
 """
 Background Thread => to send real time sensor data to the client
@@ -67,7 +68,7 @@ def database_thread():
             data = deepcopy(received_data)
 
         # Write data to CSV file dated by today's date
-        csvFileName = CSV_BASE_FILENAME + '_' + str(datetime.now().year) + '_' + str(datetime.now().month) + '_' + str(datetime.now().day) + '.csv'
+        csvFileName = CSV_BASE_FILENAME + '_' + str(datetime.now().year) + '_' + datetime.now().strftime("%m") + '_' + datetime.now().strftime("%d") + '.csv'
         writtenValues = csv_write_database(Path(Path.cwd().absolute(), 'database', csvFileName), data)
 
         # clear all written values from buffer
@@ -120,56 +121,25 @@ def disconnect():
 """
 Route to access web page to display and analyze data from database
 """
-@app.route("/weather_data")
+@app.route("/weather_data", methods = ["GET", "POST"])
 def weather_data():
-    return render_template("weather_data.html")
+    if request.method == 'POST':
+        date = request.form.get("date")
+        if date is not None:
+            (labels, data) = get_weather_data(date)
+    else:
+        date = None
+        (labels, data) = (None, None)
+    return render_template("weather_data.html", date=date, labels=labels, data=data)
+
 
 # Start parser thread
 Thread(target=parser_thread).start()
 
-# Start database thread (periodically)
+# Start database thread
 Thread(target=database_thread).start()
 
 # Starting Flask server
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
-
-
-
-
-# # Testing and learning Can be removed later
-# @app.route("/time")
-# def time():
-#     date_time = datetime.datetime.now()
-#     h = date_time.hour
-#     m = date_time.minute
-#     s = date_time.second
-#     return render_template("time.html", hour=h, minute=m, second=s)
-
-# liste_eleves = [
-#     {'nom':'Doe', 'prenom':'John', 'classe': '2A'},
-#     {'nom':'Doe1', 'prenom':'John1', 'classe': '3A'},
-#     {'nom':'Doe2', 'prenom':'John2', 'classe': '3A'},
-#     {'nom':'Doe3', 'prenom':'John3', 'classe': '2A'},
-#     {'nom':'Doe4', 'prenom':'John4', 'classe': '2A'},
-    
-# ]
-
-# @app.route("/eleves")
-# def eleves():
-#     classe = request.args.get('c')
-#     if classe:
-#         eleves_select = [eleve for eleve in liste_eleves if eleve['classe'] == classe]
-#     else:
-#         eleves_select = []
-#     return render_template("eleves.html", eleves=eleves_select)
-
-# @app.route("/formulaires")
-# def formulaires():
-#     return render_template("formulaires.html")
-
-# @app.route("/traitement", methods = ["POST"])
-# def traitement():
-#     donnees = request.form
-#     return render_template("traitement.html", donnees=donnees)
 

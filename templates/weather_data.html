@@ -1,5 +1,31 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <p>Work in Progress...</p>
+    <script type="text/javascript" src="{{ url_for('static', filename = 'js/weather_data.js') }}"></script>
+    <script type="text/javascript">
+        labels = JSON.parse('{{labels|tojson}}'); 
+        data =  JSON.parse('{{data|tojson}}'); 
+    </script>
+
+    <form action="{{ url_for('weather_data') }}" method="POST">
+        <p>
+            <label for="date">Date: </label>
+            <input type="date" name ="date" id="date">
+        </p>
+        <p>
+            <input type="submit" value="send">
+        </p>
+    </form>
+    <p>Affichage des données : {{ date }}</p>
+    <div class="chart-container">
+          <canvas id="myChartTemperature" width="500" height="300"></canvas>
+    
+          <canvas id="myChartPressure" width="500" height="300"></canvas>
+
+          <canvas id="myChartHumidity" width="500" height="300"></canvas>
+
+          <canvas id="myChartWindSpeed" width="500" height="300"></canvas>
+
+          <canvas id="myChartInternalTemperature" width="500" height="300"></canvas>
+    </div>
 {% endblock %}
