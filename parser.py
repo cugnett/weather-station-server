@@ -33,7 +33,7 @@ class Parser:
 
     def parse_data(self):
         # Read data coming from STM32 Nucleo UART2 through COM3 port
-        self.ser = serial.Serial('COM9', 115200, timeout=10, parity=serial.PARITY_NONE, rtscts=0)
+        self.ser = serial.Serial('/dev/ttyACM0', 115200, timeout=10, parity=serial.PARITY_NONE, rtscts=0)
 
         s = [BUFFER_INIT_VALUE] * UART_DATA_MAX_SIZE #same as above but maybe less confusing. 
         i = 0
