@@ -1,5 +1,8 @@
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO
+import logging
+from logging.handlers import RotatingFileHandler
+from queue import Queue
 from threading import Lock, Thread, Timer
 from datetime import datetime
 from parser import Parser
@@ -16,8 +19,24 @@ thread = None
 thread_lock = Lock()
 
 
-received_data = [] # Shared buffer to save received data
-thread_lock_received_data = Lock() # Lock to get received data from shared buffer
+received_data = [] # Buffer to contain received data, used to allow received data to be written in database
+thread_lock_received_data = Lock() # Lock to access received buffer
+
+data_to_send = [] # Buffer to contain received data, used to send data to clients connected to the server
+thread_lock_data_to_send = Lock() # Lock to access data_to_send buffer
+
+# Setting logging module
+logger = logging.getLogger()
+logFormatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+consoleHandler = logging.StreamHandler()
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
+
+fileHandler = RotatingFileHandler("server_logs.log", backupCount=100, maxBytes=65536)
+fileHandler.setFormatter(logFormatter)
+logger.addHandler(fileHandler)
+
 
 # Creating Flask instance
 app = Flask(__name__)
@@ -36,24 +55,46 @@ def get_current_datetime():
     return now.strftime("%H:%M:%S")
 
 """
-Get data from weather station, send it to our clients
+Get data from weather station, and stores it in relevant buffer used for communication with other threads
 """
 def background_thread():
     while True:
         if parser.newData:
-                with parser.data_lock:
-                    print(parser.dataTag + " is " + str(parser.dataReal))
-                    dataTag = parser.dataTag
-                    data = parser.dataReal
-                    parser.newData = False
-                # Send data to client
-                socketio.emit('updateSensorData', {'value': float(data), "date": get_current_datetime(), 'label': dataTag})
-                # Add data to the shared buffer
-                with thread_lock_received_data:
-                    add_received_data(dataTag,data)
+            with parser.data_lock:
+                app.logger.info(parser.dataTag + " is " + str(parser.dataReal))
+                dataTag = parser.dataTag
+                data = parser.dataReal
+                parser.newData = False
+                parser.newDataConsumed = True
+            # Add data to the received data buffer (used for database write)
+            with thread_lock_received_data:
+                received_data.append({dataTag: data})
+            # Add data to the send_data buffer (used for communication with clients)
+            with thread_lock_data_to_send:
+                data_to_send.append({dataTag: data})
+            app.logger.info("Data added to buffers!!")
 
-def add_received_data(dataTag,data):
-        received_data.append({dataTag: data})           
+"""
+Send data to our clients
+"""          
+def send_data_thread():
+    global data_to_send
+    while True:
+        sleep(1.0)
+        # copy data to write from shared array
+        with thread_lock_data_to_send:   
+            data_array = deepcopy(data_to_send)
+
+        # Send data to client
+        sentValues = 0
+        for data_dict in data_array:
+            for dataTag,data in data_dict.items():
+                app.logger.info("Emit data to client...")
+                socketio.emit('updateSensorData', {'value': float(data), "date": get_current_datetime(), 'label': dataTag})
+                sentValues += 1
+        # clear all sent values from buffer        
+        with thread_lock_data_to_send: 
+            data_to_send = data_to_send[sentValues:]
 
 """
 Database thread => to save data in the CSV database. Scheduled following a periodic timing
@@ -62,7 +103,7 @@ def database_thread():
     global received_data
     while True:
         sleep(10.0)
-        print("Writing data to database...")
+        app.logger.info("Writing data to database...")
         # copy data to write from shared array
         with thread_lock_received_data:
             data = deepcopy(received_data)
@@ -73,7 +114,7 @@ def database_thread():
 
         # clear all written values from buffer
         with thread_lock_received_data:
-            received_data = received_data[writtenValues-1:]
+            received_data = received_data[writtenValues:]
 
 
 
@@ -104,18 +145,18 @@ Decorator for connect
 @socketio.on('connect')
 def connect():
     global thread
-    print('Client connected')
+    app.logger.info('Client connected')
 
     with thread_lock: # not sure about this lock, comes from youtube example and I don't see why is it useful
         if thread is None:
-            thread = socketio.start_background_task(background_thread)
+            thread = socketio.start_background_task(send_data_thread)
 
 """
 Decorator for disconnect
 """
 @socketio.on('disconnect')
 def disconnect():
-    print('Client disconnected',  request.sid)
+    app.logger.info('Client disconnected',  request.sid)
 
 
 """
@@ -132,6 +173,8 @@ def weather_data():
         (labels, data) = (None, None)
     return render_template("weather_data.html", date=date, labels=labels, data=data)
 
+# Start background thread
+Thread(target=background_thread).start()
 
 # Start parser thread
 Thread(target=parser_thread).start()

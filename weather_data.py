@@ -5,7 +5,7 @@ from pathlib import Path
 
 def get_weather_data(date):
     # date is received in yyyy-mm-dd format
-    print("###########################Test")
+    #print("###########################Test")
 
     year = date[0:4]
     month = date[5:7]

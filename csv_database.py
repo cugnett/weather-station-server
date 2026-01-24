@@ -39,7 +39,7 @@ def csv_write_database(csvfilepath, data):
     with open(csvfilepath, 'a', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=FIELDNAMES,  delimiter=',')
         writer.writerows(structured_data)
-        print(f"Written {writeValueNb} values in db!!!")
+        #print(f"Written {writeValueNb} values in db!!!")
     return writeValueNb
 
 """

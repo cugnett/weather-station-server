@@ -25,6 +25,7 @@ class Parser:
         # Uart buffer
         #s = list(bytearray(UART_DATA_MAX_SIZE)) # Warning this will do a list of UART_DATA_MAX_SIZE integer, list converts bytes into int!
         self.newData = False
+        self.newDataConsumed = False
         self.dataReal = None
         self.dataTag = None
         self.bufferPtr = 0
@@ -33,7 +34,7 @@ class Parser:
 
     def parse_data(self):
         # Read data coming from STM32 Nucleo UART2 through COM3 port
-        self.ser = serial.Serial('/dev/ttyACM0', 115200, timeout=10, parity=serial.PARITY_NONE, rtscts=0)
+        self.ser = serial.Serial('/dev/ttyACM1', 115200, timeout=100, parity=serial.PARITY_NONE, rtscts=0)
 
         s = [BUFFER_INIT_VALUE] * UART_DATA_MAX_SIZE #same as above but maybe less confusing. 
         i = 0
@@ -53,18 +54,20 @@ class Parser:
 
             #To manage special case where the last byte of the buffer is the first byte of the DataTag and the first byte of the buffer the second byte of the DataTag
             if i == 0 and not getDataTag:
-                print("Handling potential special case")
+                #print("Handling potential special case")
                 s[i] = self.ser.read(1)
                 # try to get data with last buffer value and first buffer value (buffer is circular)
                 dataTagValue = int.from_bytes(b''.join([s[UART_DATA_MAX_SIZE-1], s[i]]), "little")
                 if dataTagValue in dataTagDict.values():
                     dataTag = list(dataTagDict.keys())[list(dataTagDict.values()).index(dataTagValue)] #get associated key   
-                    print("Tag detected special case:" + dataTag)
+                    #print("Tag detected special case:" + dataTag)
                     getDataTag = True   
                 i += 1
             
             # Regular loop
+            # print("read data from UART")
             s[i] = self.ser.read(1)
+            # print("1 byte read from UART")
             # Detect DataTag
             if(not getDataTag):
                 dataTagValue = int.from_bytes(b''.join(s[i-1:i+1]), "little") #little endian communication #basic but I did mistake: to get s[i-1] + s[i] => s[i-1:i+1] 
@@ -98,9 +101,13 @@ class Parser:
                 dataByteCounter = 0
                 if dataSize != 0: # we notify that new data is available in buffer, only if there was at least one byte of data
                     with self.data_lock:
+                        #print(f"New data available {dataTag}:{dataReal}")
                         self.newData = True
+                        self.newDataConsumed = False
                         self.dataTag = dataTag
                         self.dataReal = dataReal
+                    while self.newDataConsumed == False: # Wait until data is consumed
+                        pass
             i += 1
 
             # print("Buffer ==" + str(s))
