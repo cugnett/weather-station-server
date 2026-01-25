@@ -44,6 +44,8 @@ app = Flask(__name__)
 # Creating socket instance
 socketio = SocketIO(app, cors_allowed_origins='*')
 
+client_count = 0 # number of clients connected
+
 # Creating the parser instance
 parser = Parser() #should be a singleton
 
@@ -145,7 +147,10 @@ Decorator for connect
 @socketio.on('connect')
 def connect():
     global thread
+    global client_count
     app.logger.info('Client connected')
+    client_count += 1
+    socketio.emit('client_count', client_count)
 
     with thread_lock: # not sure about this lock, comes from youtube example and I don't see why is it useful
         if thread is None:
@@ -156,7 +161,10 @@ Decorator for disconnect
 """
 @socketio.on('disconnect')
 def disconnect():
+    global client_count
     app.logger.info('Client disconnected',  request.sid)
+    client_count-= 1
+    socketio.emit('client_count', client_count)
 
 
 """

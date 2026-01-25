@@ -105,4 +105,10 @@ $(document).ready(function () {
     addData(msg.date, msg.value, myChart);
     
   });
+
+  // Get client count
+  socket.on('client_count', (count) => {
+    var clientCountElement = document.getElementById('client_count');
+    clientCountElement.textContent = 'Nombre d\'utilisateurs connectés: ' + count;
+  });
 });
