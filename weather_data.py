@@ -33,7 +33,7 @@ def get_weather_data(date):
 def convert_to_h_m_s(datetime_list):
     time_list = []
     for datetime in datetime_list:
-        # datetime format is => 2026-01-19 11:05:50.872250
-        time = datetime.replace('.', ' ').split(' ')[1]
+        # datetime format is => 2026-01-19 11:05:50
+        time = datetime.split(' ')[1]
         time_list.append(time)
     return time_list
