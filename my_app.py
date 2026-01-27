@@ -149,7 +149,7 @@ Decorator for connect
 def connect():
     global thread
     global client_count
-    app.logger.info('Client connected')
+    app.logger.info('Client connected: ' + request.sid)
     client_count += 1
     socketio.emit('client_count', client_count)
 
@@ -163,7 +163,7 @@ Decorator for disconnect
 @socketio.on('disconnect')
 def disconnect():
     global client_count
-    app.logger.info('Client disconnected',  request.sid)
+    app.logger.info('Client disconnected: ' + request.sid)
     client_count-= 1
     socketio.emit('client_count', client_count)
 
