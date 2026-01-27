@@ -1,6 +1,7 @@
 import serial
 from struct import unpack
 from threading import Lock
+from datetime import datetime
 
 
 dataTagDict = { 
@@ -10,6 +11,7 @@ dataTagDict = {
   "WIND_SPEED":             0x0004,
   "RAIN_LEVEL":             0x0005,
   "HUMIDITY":               0x0006,
+  "TIMESTAMP":              0x0007,
   "NONE":                   0xFFFF
 }
 BUFFER_INIT_VALUE = b'254' # Value to fill in buffer at startup with. BUFFER_INIT_VALUE is not a DataTag or any other frame control value, to avoid false detection at startup
@@ -34,7 +36,7 @@ class Parser:
 
     def parse_data(self):
         # Read data coming from STM32 Nucleo UART2 through COM3 port
-        self.ser = serial.Serial('/dev/ttyACM2', 115200, timeout=100, parity=serial.PARITY_NONE, rtscts=0)
+        self.ser = serial.Serial('COM9', 115200, timeout=100, parity=serial.PARITY_NONE, rtscts=0)
 
         s = [BUFFER_INIT_VALUE] * UART_DATA_MAX_SIZE #same as above but maybe less confusing. 
         i = 0
@@ -89,8 +91,11 @@ class Parser:
                         #print("Data is " + str(data))
                         getData = True
                         #For test: we need here to handle different datatypes
-                        dataRealTuple = unpack('<d',b''.join(data))
-                        (dataReal,) = dataRealTuple # unpack returns a tuple even if there is a single value, wo we extract the value from the tuple here into dataReal
+                        if dataTag == "TIMESTAMP":
+                            dataReal = self.unpackTimestamp(data, dataSize)
+                        else:
+                            dataRealTuple = unpack('<d',b''.join(data))
+                            (dataReal,) = dataRealTuple # unpack returns a tuple even if there is a single value, wo we extract the value from the tuple here into dataReal
                         #print(dataTag + " is " + str(dataReal))
                 
             if(getData or (getDataSize and dataSize == 0)): # we finished to parse  the frame next frame is expected, reset all
@@ -114,6 +119,29 @@ class Parser:
             # reset buffer if we reached the end
             if i >= UART_DATA_MAX_SIZE:
                 i = 0
+
+    """
+    Unpack a nbBytes byte array into a timestamp
+    """
+    def unpackTimestamp(self, data, nbBytes):
+        # Unpack bytes by byte and convert into datetime. it is at format Weekday (Monday = 1), Month, Date, Year in 2 digits (26 for 2026),  H,M,S
+        for i in range(0,nbBytes):
+           if i == 1:
+               (monthstr,) = unpack('<b', data[i])
+           if i == 2:
+               (daystr,) = unpack('<b', data[i])
+           if i == 3:
+               (yearstr,) = unpack('<b', data[i])
+               yearstr = 2000 + yearstr # Because the date is not complete
+           if i == 4:
+               (hourstr,) = unpack('<b', data[i])
+           if i == 5:
+               (minstr,) = unpack('<b', data[i])
+           if i == 6:
+               (secstr,) = unpack('<b', data[i])
+        dateString = f"{daystr}/{monthstr}/{yearstr} {hourstr}:{minstr}:{secstr}"
+        datetimeValue = datetime.strptime(dateString,"%d/%m/%Y %H:%M:%S")
+        return datetimeValue
 
 
 

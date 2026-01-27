@@ -2,13 +2,11 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO
 import logging
 from logging.handlers import RotatingFileHandler
-from queue import Queue
-from threading import Lock, Thread, Timer
+from threading import Lock, Thread
 from datetime import datetime
 from parser import Parser
 from copy import deepcopy
-from csv_database import csv_write_database, CSV_BASE_FILENAME
-from pathlib import Path
+from csv_database import csv_write_database
 from time import sleep
 from weather_data import get_weather_data
 
@@ -81,6 +79,7 @@ Send data to our clients
 """          
 def send_data_thread():
     global data_to_send
+    currentDatetime = None
     while True:
         sleep(1.0)
         # copy data to write from shared array
@@ -91,8 +90,11 @@ def send_data_thread():
         sentValues = 0
         for data_dict in data_array:
             for dataTag,data in data_dict.items():
-                app.logger.info("Emit data to client...")
-                socketio.emit('updateSensorData', {'value': float(data), "date": get_current_datetime(), 'label': dataTag})
+                if dataTag == "TIMESTAMP": # we get the datetime associated to the data to come next
+                    currentDatetime = data
+                elif currentDatetime != None: # if we are within a timestamped frame, send data with associated timestamp
+                    app.logger.info("Emit data to client...")
+                    socketio.emit('updateSensorData', {'value': float(data), "date": currentDatetime.strftime("%H:%M:%S"), 'label': dataTag})
                 sentValues += 1
         # clear all sent values from buffer        
         with thread_lock_data_to_send: 
@@ -110,9 +112,8 @@ def database_thread():
         with thread_lock_received_data:
             data = deepcopy(received_data)
 
-        # Write data to CSV file dated by today's date
-        csvFileName = CSV_BASE_FILENAME + '_' + str(datetime.now().year) + '_' + datetime.now().strftime("%m") + '_' + datetime.now().strftime("%d") + '.csv'
-        writtenValues = csv_write_database(Path(Path.cwd().absolute(), 'database', csvFileName), data)
+        # Write data to database
+        writtenValues = csv_write_database(data)
 
         # clear all written values from buffer
         with thread_lock_received_data:
