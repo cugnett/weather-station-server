@@ -2,6 +2,8 @@ import serial
 from struct import unpack
 from threading import Lock
 from datetime import datetime
+import os
+from time import sleep
 
 
 dataTagDict = { 
@@ -18,6 +20,8 @@ BUFFER_INIT_VALUE = b'254' # Value to fill in buffer at startup with. BUFFER_INI
 
 UART_DATA_MAX_SIZE = 256
 
+MAX_DELAY_TO_RECEIVE_DATA = 10
+DEVBYPASS_COMPORT = "COM9"
 
 class Parser:
 
@@ -35,8 +39,8 @@ class Parser:
 
 
     def parse_data(self):
-        # Read data coming from STM32 Nucleo UART2 through COM3 port
-        self.ser = serial.Serial('COM9', 115200, timeout=100, parity=serial.PARITY_NONE, rtscts=0)
+        # Read data coming from STM32 Nucleo UART2 through serial port
+        self.ser = self.connectToSerial()
 
         s = [BUFFER_INIT_VALUE] * UART_DATA_MAX_SIZE #same as above but maybe less confusing. 
         i = 0
@@ -90,12 +94,13 @@ class Parser:
                     if(dataByteCounter == dataSize): # we got all the data
                         #print("Data is " + str(data))
                         getData = True
-                        #For test: we need here to handle different datatypes
                         if dataTag == "TIMESTAMP":
                             dataReal = self.unpackTimestamp(data, dataSize)
+                        elif dataSize == 8:
+                            (dataReal,) = unpack('<d',b''.join(data)) # unpack returns a tuple even if there is a single value, so we extract the value from the tuple here into dataReal
                         else:
-                            dataRealTuple = unpack('<d',b''.join(data))
-                            (dataReal,) = dataRealTuple # unpack returns a tuple even if there is a single value, wo we extract the value from the tuple here into dataReal
+                            print("WARNING - PARSER: Unhandled case")
+                            dataReal = -1 # if we are in a case we don't handle fix the value to -1 for now
                         #print(dataTag + " is " + str(dataReal))
                 
             if(getData or (getDataSize and dataSize == 0)): # we finished to parse  the frame next frame is expected, reset all
@@ -143,6 +148,50 @@ class Parser:
         datetimeValue = datetime.strptime(dateString,"%d/%m/%Y %H:%M:%S")
         return datetimeValue
 
+    """
+    Connect automatically to a talking serial port
+    Warning: If it happens data is transmitting on another port we could connect to the wrong port.
+    TO DO: Complicated but we may to a more advanced system later to ensure we connect only to weather station port
+    """
+    def connectToSerial(self): 
+        ser = None
+        if os.name == "nt": #Windows
+            portName = "COM"
+        elif os.name == "posix": #Unix
+            portName = "/dev/ttyACM"
+        else:
+            raise Exception('Unsupported OS')
 
+        tryAgain = 1
+        ## Dev bypass, when it is ok to modify manually instead of searching automatically because it takes too much time
+        try:
+            tryAgain = 0
+            ser = serial.Serial( DEVBYPASS_COMPORT, 115200, timeout=MAX_DELAY_TO_RECEIVE_DATA * 2, parity=serial.PARITY_NONE, rtscts=0)
+        except:
+            tryAgain = 1
+
+        
+        for i in range(0,20):
+            if tryAgain == 1:
+                try:
+                    tryAgain = 0
+                    print("Trying to connect to " +  portName + str(i) + "...")
+                    ser = serial.Serial( portName + str(i), 115200, timeout=1, parity=serial.PARITY_NONE, rtscts=0)
+                    sleep(MAX_DELAY_TO_RECEIVE_DATA) # To ensure that data will be available on the port we want to connect
+                    val = ser.read(1)
+                    if val == b'':
+                        tryAgain = 1
+                except:
+                    print(portName + str(i) + " not available")
+                    tryAgain = 1
+            else:
+                break     
+       
+        if tryAgain == 1: # Mean we couldn't connect to serial port
+            raise Exception('Impossible to connect to serial port')
+        
+        # If we are here it means we successfully connect to port with data available
+        ser.timeout = MAX_DELAY_TO_RECEIVE_DATA * 2 
+        return ser
 
 
