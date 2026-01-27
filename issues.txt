@@ -1,0 +1,32 @@
+########################
+#Améliorations à faire:#
+########################
+Côté station météo (Nucleo):
+
+PROBLEMES
+##VERY LOW### => Consommation de 145mA * 5V => 0.725W -> A réduire, seulement 4.2 jours d'autonomie avec ma batterie externe
+
+##LOW######## => La carte s'éteint au bout de 10 secondes si je déconnecte V- et V+ qui alimentent capteurs + module LoRa.
+					=> La LED verte clignote furtivement puis tout s'éteint y compris la LED rouge LD3
+					=> Pourquoi ce crash ? => à investiguer
+
+FONCTIONNALITES
+##HIGH## => Mise en place d'un timestamp dans les données Date/H:M:S
+##LOW### => Mise en place d'un CRC
+##LOW### => Retourner des messages d'erreur en cas de problèmes de comm avec capteurs/module LoRA
+##HIGH## => Refonte de l'anémomètre, le système actuel ne marche pas en condition réelles (ca tourne pas)
+
+
+Côté serveur (RaspberryPi):
+
+PROBLEMES
+##LOW### => Améliorer l'affichage du module LoRA (on ne voit pas bien le nombre de paquet reçus car ca dépasse de l'écran au bout d'un moment
+##HIGH## => Réaliser un polling auto des ports séries, car le port série où est connecté le module LoRA change tout le temps (ttyACM0, ttyACM1, ttyACM2...)
+##HIGH## => Améliorer la robustesse du parser => gérer l'Exception de unpack qui essaie toujours de lire 8 octets et parfois n'y arrive pas. => mettre une valeur -1 à la place ?
+##HIGH## => Améliorer les performances du serveur en ligne beaucoup trop lent : Gestion du multithreading + socket IO avec Gunicorn pas évident à regarder, analyser les requêtes qui prennent du temps
+
+FONCTIONNALITES
+##MEDIUM## => Afficher les données temps réel avec un buffer dans le passé de 50 secondes de manière qu'à la connexion du client il voit déjà des données et pas des courbes vides
+##MEDIUM## => Sauvegarder les données dans la DB seulement 1 fois par minute
+##MEDIUM## => Utiliser le timestamp des trames une fois celui ci implémenté cote Nucleo
+
