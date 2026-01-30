@@ -21,7 +21,7 @@ BUFFER_INIT_VALUE = b'254' # Value to fill in buffer at startup with. BUFFER_INI
 UART_DATA_MAX_SIZE = 256
 
 MAX_DELAY_TO_RECEIVE_DATA = 10
-DEVBYPASS_COMPORT = "COM9"
+DEFAULT_COMPORT = "COM9"
 
 class Parser:
 
@@ -163,10 +163,10 @@ class Parser:
             raise Exception('Unsupported OS')
 
         tryAgain = 1
-        ## Dev bypass, when it is ok to modify manually instead of searching automatically because it takes too much time
+        ## Dev bypass, by dafault looking on a predefined port instead of searching automatically because it takes too much time
         try:
             tryAgain = 0
-            ser = serial.Serial( DEVBYPASS_COMPORT, 115200, timeout=MAX_DELAY_TO_RECEIVE_DATA * 2, parity=serial.PARITY_NONE, rtscts=0)
+            ser = serial.Serial( DEFAULT_COMPORT, 115200, timeout=MAX_DELAY_TO_RECEIVE_DATA * 2, parity=serial.PARITY_NONE, rtscts=0)
         except:
             tryAgain = 1
 
