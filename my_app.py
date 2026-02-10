@@ -64,7 +64,7 @@ def background_thread():
     while True:
         if parser.newData:
             with parser.data_lock:
-                logger.info(parser.dataTag + " is " + str(parser.dataReal))
+                logger.debug(parser.dataTag + " is " + str(parser.dataReal))
                 dataTag = parser.dataTag
                 data = parser.dataReal
                 parser.newData = False
@@ -75,7 +75,7 @@ def background_thread():
             # Add data to the send_data buffer (used for communication with clients)
             with thread_lock_data_to_send:
                 data_to_send.append({dataTag: data})
-            logger.info("Data added to buffers!!")
+            logger.debug("Data added to buffers!!")
 
 """
 Send data to our clients
@@ -96,7 +96,7 @@ def send_data_thread():
                 if dataTag == "TIMESTAMP": # we get the datetime associated to the data to come next
                     currentDatetime = data
                 elif currentDatetime != None: # if we are within a timestamped frame, send data with associated timestamp
-                    logger.info("Emit data to client...")
+                    logger.debug("Emit data to client...")
                     socketio.emit('updateSensorData', {'value': float(data), "date": currentDatetime.strftime("%H:%M:%S"), 'label': dataTag})
                 sentValues += 1
         # clear all sent values from buffer        
@@ -109,14 +109,14 @@ Database thread => to save data in the CSV database. Scheduled following a perio
 def database_thread():
     global received_data
     while True:
-        sleep(10.0)
-        logger.info("Writing data to database...")
+        sleep(60.0)    
         # copy data to write from shared array
         with thread_lock_received_data:
             data = deepcopy(received_data)
 
         # Write data to database
         writtenValues = csv_write_database(data)
+        logger.info(f"Writing to db... {writtenValues}")
 
         # clear all written values from buffer
         with thread_lock_received_data:
