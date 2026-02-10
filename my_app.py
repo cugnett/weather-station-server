@@ -23,6 +23,11 @@ thread_lock_received_data = Lock() # Lock to access received buffer
 data_to_send = [] # Buffer to contain received data, used to send data to clients connected to the server
 thread_lock_data_to_send = Lock() # Lock to access data_to_send buffer
 
+
+
+# Creating Flask instance
+app = Flask(__name__)
+
 # Setting logging module
 logger = logging.getLogger()
 logFormatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
@@ -34,10 +39,8 @@ logger.addHandler(consoleHandler)
 fileHandler = RotatingFileHandler("server_logs.log", backupCount=100, maxBytes=65536)
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
+logger.setLevel(logging.INFO)
 
-
-# Creating Flask instance
-app = Flask(__name__)
 
 # Creating socket instance
 socketio = SocketIO(app, cors_allowed_origins='*')
@@ -61,7 +64,7 @@ def background_thread():
     while True:
         if parser.newData:
             with parser.data_lock:
-                app.logger.info(parser.dataTag + " is " + str(parser.dataReal))
+                logger.info(parser.dataTag + " is " + str(parser.dataReal))
                 dataTag = parser.dataTag
                 data = parser.dataReal
                 parser.newData = False
@@ -72,7 +75,7 @@ def background_thread():
             # Add data to the send_data buffer (used for communication with clients)
             with thread_lock_data_to_send:
                 data_to_send.append({dataTag: data})
-            app.logger.info("Data added to buffers!!")
+            logger.info("Data added to buffers!!")
 
 """
 Send data to our clients
@@ -93,7 +96,7 @@ def send_data_thread():
                 if dataTag == "TIMESTAMP": # we get the datetime associated to the data to come next
                     currentDatetime = data
                 elif currentDatetime != None: # if we are within a timestamped frame, send data with associated timestamp
-                    app.logger.info("Emit data to client...")
+                    logger.info("Emit data to client...")
                     socketio.emit('updateSensorData', {'value': float(data), "date": currentDatetime.strftime("%H:%M:%S"), 'label': dataTag})
                 sentValues += 1
         # clear all sent values from buffer        
@@ -107,7 +110,7 @@ def database_thread():
     global received_data
     while True:
         sleep(10.0)
-        app.logger.info("Writing data to database...")
+        logger.info("Writing data to database...")
         # copy data to write from shared array
         with thread_lock_received_data:
             data = deepcopy(received_data)
@@ -149,7 +152,7 @@ Decorator for connect
 def connect():
     global thread
     global client_count
-    app.logger.info('Client connected: ' + request.sid)
+    logger.info('Client connected: ' + request.sid)
     client_count += 1
     socketio.emit('client_count', client_count)
 
@@ -163,7 +166,7 @@ Decorator for disconnect
 @socketio.on('disconnect')
 def disconnect():
     global client_count
-    app.logger.info('Client disconnected: ' + request.sid)
+    logger.info('Client disconnected: ' + request.sid)
     client_count-= 1
     socketio.emit('client_count', client_count)
 
