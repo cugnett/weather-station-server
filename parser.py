@@ -95,7 +95,7 @@ class Parser:
                         #print("Data is " + str(data))
                         getData = True
                         if dataTag == "TIMESTAMP":
-                            dataReal = self.unpackTimestamp(data, dataSize)
+                            dataReal = self.unpackTimestamp(data, dataSize) # Warning this is bypassed temporarily!!!
                         elif dataSize == 8:
                             (dataReal,) = unpack('<d',b''.join(data)) # unpack returns a tuple even if there is a single value, so we extract the value from the tuple here into dataReal
                         else:
@@ -129,23 +129,28 @@ class Parser:
     Unpack a nbBytes byte array into a timestamp
     """
     def unpackTimestamp(self, data, nbBytes):
+        
+        # Temporary workaround because the weather station is always with wrong time inside
+        dateString = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        datetimeValue =datetime.strptime(dateString,"%d/%m/%Y %H:%M:%S")
+
         # Unpack bytes by byte and convert into datetime. it is at format Weekday (Monday = 1), Month, Date, Year in 2 digits (26 for 2026),  H,M,S
-        for i in range(0,nbBytes):
-           if i == 1:
-               (monthstr,) = unpack('<b', data[i])
-           if i == 2:
-               (daystr,) = unpack('<b', data[i])
-           if i == 3:
-               (yearstr,) = unpack('<b', data[i])
-               yearstr = 2000 + yearstr # Because the date is not complete
-           if i == 4:
-               (hourstr,) = unpack('<b', data[i])
-           if i == 5:
-               (minstr,) = unpack('<b', data[i])
-           if i == 6:
-               (secstr,) = unpack('<b', data[i])
-        dateString = f"{daystr}/{monthstr}/{yearstr} {hourstr}:{minstr}:{secstr}"
-        datetimeValue = datetime.strptime(dateString,"%d/%m/%Y %H:%M:%S")
+        # for i in range(0,nbBytes):
+        #    if i == 1:
+        #        (monthstr,) = unpack('<b', data[i])
+        #    if i == 2:
+        #        (daystr,) = unpack('<b', data[i])
+        #    if i == 3:
+        #        (yearstr,) = unpack('<b', data[i])
+        #        yearstr = 2000 + yearstr # Because the date is not complete
+        #    if i == 4:
+        #        (hourstr,) = unpack('<b', data[i])
+        #    if i == 5:
+        #        (minstr,) = unpack('<b', data[i])
+        #    if i == 6:
+        #        (secstr,) = unpack('<b', data[i])
+        # dateString = f"{daystr}/{monthstr}/{yearstr} {hourstr}:{minstr}:{secstr}"
+        # datetimeValue = datetime.strptime(dateString,"%d/%m/%Y %H:%M:%S")
         return datetimeValue
 
     """
